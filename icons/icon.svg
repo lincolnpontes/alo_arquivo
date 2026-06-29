@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="78" y1="54" x2="438" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#174d6e"/>
+      <stop offset="1" stop-color="#0c2539"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="176" y1="130" x2="337" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dffaf2"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#071722" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="402" cy="94" r="86" fill="#2dd4a8" opacity=".10"/>
+  <circle cx="100" cy="430" r="106" fill="#2dd4a8" opacity=".08"/>
+  <g filter="url(#shadow)">
+    <path d="M169 156h190c17 0 31 14 31 31v222c0 17-14 31-31 31H169c-17 0-31-14-31-31V187c0-17 14-31 31-31Z" fill="#2dd4a8" opacity=".36"/>
+    <path d="M153 127h190c17 0 31 14 31 31v222c0 17-14 31-31 31H153c-17 0-31-14-31-31V158c0-17 14-31 31-31Z" fill="url(#paper)"/>
+  </g>
+  <g fill="#102a43">
+    <rect x="175" y="198" width="44" height="44" rx="5"/>
+    <rect x="285" y="198" width="44" height="44" rx="5"/>
+    <rect x="175" y="308" width="44" height="44" rx="5"/>
+    <rect x="234" y="201" width="17" height="17" rx="3"/>
+    <rect x="253" y="224" width="18" height="18" rx="3"/>
+    <rect x="233" y="254" width="22" height="22" rx="3"/>
+    <rect x="269" y="255" width="17" height="17" rx="3"/>
+    <rect x="301" y="257" width="28" height="18" rx="3"/>
+    <rect x="235" y="288" width="17" height="17" rx="3"/>
+    <rect x="266" y="286" width="23" height="23" rx="3"/>
+    <rect x="298" y="300" width="31" height="18" rx="3"/>
+    <rect x="232" y="323" width="22" height="29" rx="3"/>
+    <rect x="271" y="326" width="17" height="26" rx="3"/>
+    <rect x="305" y="331" width="24" height="21" rx="3"/>
+  </g>
+  <g fill="none" stroke="#2dd4a8" stroke-width="17" stroke-linecap="round">
+    <path d="M92 177v-45c0-22 18-40 40-40h45"/>
+    <path d="M335 92h45c22 0 40 18 40 40v45"/>
+    <path d="M420 335v45c0 22-18 40-40 40h-45"/>
+    <path d="M177 420h-45c-22 0-40-18-40-40v-45"/>
+  </g>
+</svg>
