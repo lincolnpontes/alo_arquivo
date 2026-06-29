@@ -1,8 +1,9 @@
-const CACHE_NAME = 'alo-arquivo-v1';
+const CACHE_NAME = 'alo-arquivo-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './logic.js',
   './app.js',
   './manifest.json',
   './icons/icon.svg',

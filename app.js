@@ -3,11 +3,22 @@
 
   const STORAGE_KEY = 'alo_arquivo_leituras_v1';
   const CAMERA_KEY = 'alo_arquivo_camera_v1';
+  const SETTINGS_KEY = 'alo_arquivo_config_v1';
   const FEEDBACK_COOLDOWN = 1700;
+  const DEFAULT_SETTINGS = Object.freeze({
+    theme: 'default',
+    nupValidation: true,
+    itemType: 'processos',
+    listName: 'Lista',
+    scanMode: 'qr'
+  });
+  const logic = window.AloArquivoLogic;
 
   const elements = {
-    headerCount: document.getElementById('headerCount'),
+    themeColor: document.getElementById('themeColor'),
     listCount: document.getElementById('listCount'),
+    listTitle: document.getElementById('listTitle'),
+    itemType: document.getElementById('itemType'),
     codeList: document.getElementById('codeList'),
     emptyState: document.getElementById('emptyState'),
     shareButton: document.getElementById('shareButton'),
@@ -15,6 +26,8 @@
     startButton: document.getElementById('startButton'),
     switchButton: document.getElementById('switchButton'),
     torchButton: document.getElementById('torchButton'),
+    scanModeButton: document.getElementById('scanModeButton'),
+    scanModeText: document.getElementById('scanModeText'),
     cameraStatus: document.getElementById('cameraStatus'),
     cameraStatusText: document.getElementById('cameraStatusText'),
     cameraStage: document.getElementById('cameraStage'),
@@ -26,9 +39,17 @@
     feedbackValue: document.getElementById('feedbackValue'),
     clearDialog: document.getElementById('clearDialog'),
     confirmClearButton: document.getElementById('confirmClearButton'),
+    editTitleButton: document.getElementById('editTitleButton'),
+    titleDialog: document.getElementById('titleDialog'),
+    listNameInput: document.getElementById('listNameInput'),
+    saveTitleButton: document.getElementById('saveTitleButton'),
+    settingsButton: document.getElementById('settingsButton'),
+    settingsDialog: document.getElementById('settingsDialog'),
+    nupValidationToggle: document.getElementById('nupValidationToggle'),
     toast: document.getElementById('toast')
   };
 
+  let settings = loadSettings();
   let codes = loadCodes();
   let codeSet = new Set(codes);
   let scanner = null;
@@ -65,6 +86,41 @@
     ].filter(value => value !== undefined);
   };
 
+  function loadSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      const theme = ['default', 'pink', 'blue', 'purple', 'sunset', 'glass'].includes(saved.theme) ? saved.theme : DEFAULT_SETTINGS.theme;
+      return {
+        theme,
+        nupValidation: typeof saved.nupValidation === 'boolean' ? saved.nupValidation : DEFAULT_SETTINGS.nupValidation,
+        itemType: ['processos', 'documentos'].includes(saved.itemType) ? saved.itemType : DEFAULT_SETTINGS.itemType,
+        listName: logic.cleanListName(saved.listName || DEFAULT_SETTINGS.listName),
+        scanMode: ['qr', 'barcode'].includes(saved.scanMode) ? saved.scanMode : DEFAULT_SETTINGS.scanMode
+      };
+    } catch {
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+
+  function saveSettings() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  function applySettings() {
+    const themeColors = {
+      default: '#102a43', pink: '#702d4f', blue: '#123c78',
+      purple: '#4c287a', sunset: '#713b28', glass: '#132238'
+    };
+    document.documentElement.dataset.theme = settings.theme;
+    elements.themeColor.content = themeColors[settings.theme];
+    elements.listTitle.textContent = settings.listName;
+    elements.itemType.value = settings.itemType;
+    elements.nupValidationToggle.checked = settings.nupValidation;
+    const selectedTheme = elements.settingsDialog.querySelector(`input[name="theme"][value="${settings.theme}"]`);
+    if (selectedTheme) selectedTheme.checked = true;
+    updateScanModeUI();
+  }
+
   function loadCodes() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -85,7 +141,6 @@
 
   function renderList() {
     const count = codes.length;
-    elements.headerCount.textContent = count;
     elements.listCount.textContent = count;
     elements.emptyState.classList.toggle('is-hidden', count > 0);
     elements.shareButton.disabled = count === 0;
@@ -118,9 +173,27 @@
     elements.codeList.replaceChildren(fragment);
   }
 
-  function registerReading(rawValue) {
-    const value = String(rawValue ?? '').trim();
-    if (!value) return false;
+  function registerReading(rawValue, decodedResult) {
+    if (decodedResult && !formatMatchesMode(decodedResult)) return false;
+
+    const rawText = String(rawValue ?? '').trim();
+    if (!rawText) return false;
+
+    let value = rawText;
+    if (settings.nupValidation) {
+      const nup = logic.extractNup(rawText);
+      if (!nup) {
+        const now = Date.now();
+        if (lastFeedback.value !== `invalid:${rawText}` || now - lastFeedback.time > FEEDBACK_COOLDOWN) {
+          lastFeedback = { value: `invalid:${rawText}`, time: now };
+          showScanFeedback('error', 'Se o erro persistir, tente ler o código de barras.');
+          playTone('error');
+          if (navigator.vibrate) navigator.vibrate([80, 55, 80]);
+        }
+        return false;
+      }
+      value = nup;
+    }
 
     const now = Date.now();
     const isDuplicate = codeSet.has(value);
@@ -146,13 +219,26 @@
     return true;
   }
 
+  function formatMatchesMode(decodedResult) {
+    const formatName = String(
+      decodedResult?.result?.format?.formatName ||
+      decodedResult?.result?.format?.format ||
+      decodedResult?.format?.formatName || ''
+    ).toUpperCase();
+    return logic.formatMatchesMode(formatName, settings.scanMode);
+  }
+
   function showScanFeedback(type, value) {
     const duplicate = type === 'duplicate';
-    elements.scanFeedback.classList.remove('is-visible', 'is-duplicate');
+    const invalid = type === 'error';
+    elements.scanFeedback.classList.remove('is-visible', 'is-duplicate', 'is-error');
     void elements.scanFeedback.offsetWidth;
     elements.scanFeedback.classList.toggle('is-duplicate', duplicate);
-    elements.feedbackIcon.textContent = duplicate ? '!' : '✓';
-    elements.feedbackTitle.textContent = duplicate ? 'Código já estava na lista' : `Leitura ${codes.length} salva`;
+    elements.scanFeedback.classList.toggle('is-error', invalid);
+    elements.feedbackIcon.textContent = duplicate ? '!' : invalid ? '×' : '✓';
+    elements.feedbackTitle.textContent = duplicate
+      ? 'Código já estava na lista'
+      : invalid ? 'NUP Padrão UFPB não encontrado' : `Leitura ${codes.length} salva`;
     elements.feedbackValue.textContent = value;
     elements.scanFeedback.classList.add('is-visible');
     clearTimeout(feedbackTimer);
@@ -294,9 +380,28 @@
     setCameraStatus(live ? 'live' : 'idle', live ? 'Lendo' : 'Desligada');
     elements.startButton.querySelector('span').textContent = live ? 'Parar câmera' : 'Iniciar câmera';
     elements.startButton.disabled = false;
+    const mode = settings.scanMode === 'qr' ? 'QR Code' : 'código de barras';
     elements.cameraHelp.textContent = live
-      ? 'Leitura contínua ativa. Mostre um código depois do outro, sem fechar a câmera.'
-      : 'A câmera permanece aberta. Basta mostrar um código depois do outro.';
+      ? `Leitura contínua de ${mode} ativa. Mostre um código depois do outro.`
+      : `Modo ${mode}. A câmera permanece aberta entre as leituras.`;
+  }
+
+  function toggleScanMode() {
+    settings.scanMode = settings.scanMode === 'qr' ? 'barcode' : 'qr';
+    saveSettings();
+    updateScanModeUI();
+    showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
+  }
+
+  function updateScanModeUI() {
+    const isQr = settings.scanMode === 'qr';
+    elements.scanModeText.textContent = isQr ? 'QR Code' : 'Barras';
+    elements.scanModeButton.setAttribute('aria-label', isQr
+      ? 'Leitura de QR Code. Toque para mudar para código de barras.'
+      : 'Leitura de código de barras. Toque para mudar para QR Code.');
+    if (!scanner?.isScanning) {
+      elements.cameraHelp.textContent = `Modo ${isQr ? 'QR Code' : 'código de barras'}. A câmera permanece aberta entre as leituras.`;
+    }
   }
 
   async function switchCamera() {
@@ -375,8 +480,7 @@
   }
 
   function buildShareText() {
-    const noun = codes.length === 1 ? 'número lido' : 'números lidos';
-    return `${codes.join('\n')}\n\nTotal: ${codes.length} ${noun}.`;
+    return logic.buildShareText(codes, settings);
   }
 
   async function shareCodes() {
@@ -415,12 +519,50 @@
     toastTimer = setTimeout(() => elements.toast.classList.remove('is-visible'), 2600);
   }
 
+  function openTitleDialog() {
+    elements.listNameInput.value = settings.listName;
+    elements.titleDialog.showModal();
+    requestAnimationFrame(() => elements.listNameInput.select());
+  }
+
+  function saveListName() {
+    settings.listName = logic.cleanListName(elements.listNameInput.value);
+    saveSettings();
+    elements.listTitle.textContent = settings.listName;
+    showToast('Nome da lista atualizado.');
+  }
+
+  function openSettings() {
+    applySettings();
+    elements.settingsDialog.showModal();
+  }
+
   elements.startButton.addEventListener('click', toggleCamera);
+  elements.scanModeButton.addEventListener('click', toggleScanMode);
   elements.switchButton.addEventListener('click', switchCamera);
   elements.torchButton.addEventListener('click', toggleTorch);
   elements.shareButton.addEventListener('click', shareCodes);
   elements.clearButton.addEventListener('click', () => elements.clearDialog.showModal());
   elements.confirmClearButton.addEventListener('click', clearCodes);
+  elements.editTitleButton.addEventListener('click', openTitleDialog);
+  elements.saveTitleButton.addEventListener('click', saveListName);
+  elements.settingsButton.addEventListener('click', openSettings);
+  elements.itemType.addEventListener('change', () => {
+    settings.itemType = elements.itemType.value;
+    saveSettings();
+  });
+  elements.nupValidationToggle.addEventListener('change', () => {
+    settings.nupValidation = elements.nupValidationToggle.checked;
+    saveSettings();
+    showToast(settings.nupValidation ? 'Validação NUP UFPB ativada.' : 'Validação NUP UFPB desativada.');
+  });
+  elements.settingsDialog.addEventListener('change', event => {
+    if (event.target.matches('input[name="theme"]')) {
+      settings.theme = event.target.value;
+      saveSettings();
+      applySettings();
+    }
+  });
   elements.codeList.addEventListener('click', event => {
     const button = event.target.closest('.remove-button');
     if (button) removeCode(Number(button.dataset.index));
@@ -431,6 +573,7 @@
     }
   });
 
+  applySettings();
   renderList();
 
   if ('serviceWorker' in navigator) {
@@ -441,6 +584,7 @@
     registerReading,
     buildShareText,
     getCodes: () => [...codes],
+    getSettings: () => ({ ...settings }),
     clearCodes
   });
 })();

@@ -8,6 +8,10 @@ Aplicativo web instalável para leitura contínua de QR Code e códigos de barra
 - salva cada código apenas uma vez;
 - numera a lista automaticamente;
 - mantém a lista no próprio aparelho;
+- permite nomear a lista e classificá-la como processos ou documentos;
+- valida por padrão o NUP UFPB (17 dígitos iniciados por 23074);
+- alterna entre leitura de QR Code e código de barras;
+- oferece seis temas, incluindo o tema vitrificado;
 - compartilha os códigos, um por linha, pela tela nativa do Android/iOS;
 - funciona como PWA e pode ser instalado na tela inicial.
 

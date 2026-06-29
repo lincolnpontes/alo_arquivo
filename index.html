@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#102a43">
+  <meta id="themeColor" name="theme-color" content="#102a43">
   <meta name="description" content="Leitor contínuo de QR Code e código de barras.">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="styles.css">
 
   <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script defer src="logic.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -28,10 +29,9 @@
         <p>Leitura rápida e contínua</p>
       </div>
     </div>
-    <div class="header-total" aria-label="Total de leituras">
-      <strong id="headerCount">0</strong>
-      <span>lidos</span>
-    </div>
+    <button id="settingsButton" class="settings-button" type="button" aria-label="Abrir configurações" title="Configurações">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.8 7.8 0 0 0 .1-1 7.8 7.8 0 0 0-.1-1l2.1-1.6-2-3.4L17 7a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.4 3A7.7 7.7 0 0 0 9 7L6.4 6l-2 3.4L6.6 11a7.8 7.8 0 0 0-.1 1 7.8 7.8 0 0 0 .1 1l-2.1 1.6 2 3.4L9 17a7.7 7.7 0 0 0 1.7 1l.4 3h4l.4-3a7.7 7.7 0 0 0 1.7-1l2.6 1 2-3.4L19.4 13ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+    </button>
   </header>
 
   <main class="app-shell">
@@ -69,9 +69,13 @@
       <p id="cameraHelp" class="camera-help">A câmera permanece aberta. Basta mostrar um código depois do outro.</p>
 
       <div class="camera-actions">
-        <button id="startButton" class="button button-primary" type="button">
+        <button id="startButton" class="button button-primary start-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 13.2A4.2 4.2 0 1 1 12 8.8a4.2 4.2 0 0 1 0 8.4Z"/></svg>
           <span>Iniciar câmera</span>
+        </button>
+        <button id="scanModeButton" class="button button-secondary mode-button" type="button" aria-label="Mudar tipo de leitura">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
+          <span id="scanModeText">QR Code</span>
         </button>
         <button id="switchButton" class="button button-secondary is-hidden" type="button" aria-label="Trocar câmera">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.1 6.1A7.9 7.9 0 0 1 20 9h-2.1a6 6 0 0 0-9.4-1.5L11 10H4V3l3.1 3.1ZM16.9 17.9A7.9 7.9 0 0 1 4 15h2.1a6 6 0 0 0 9.4 1.5L13 14h7v7l-3.1-3.1Z"/></svg>
@@ -86,11 +90,22 @@
 
     <section class="card list-card" aria-labelledby="listTitle">
       <div class="section-heading list-heading">
-        <div>
+        <div class="editable-title-wrap">
           <span class="eyebrow">LISTA</span>
-          <h2 id="listTitle">Códigos lidos</h2>
+          <div class="editable-title-row">
+            <h2 id="listTitle">Lista</h2>
+            <button id="editTitleButton" class="edit-title-button" type="button" aria-label="Editar nome da lista" title="Editar nome da lista">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15.7 5.3 3 3L8.9 18H6v-2.9l9.7-9.8Zm2.1-2.1a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2l-1.1 1.1-3-3 1.1-1.1Z"/></svg>
+            </button>
+          </div>
         </div>
-        <span id="listCount" class="count-badge">0</span>
+        <label class="type-counter" aria-label="Tipo e quantidade de itens">
+          <select id="itemType">
+            <option value="processos">Processos</option>
+            <option value="documentos">Documentos</option>
+          </select>
+          <strong id="listCount">0</strong>
+        </label>
       </div>
 
       <div id="emptyState" class="empty-state">
@@ -124,6 +139,80 @@
       <div class="dialog-actions">
         <button class="button button-secondary" value="cancel">Cancelar</button>
         <button id="confirmClearButton" class="button button-danger" value="confirm">Sim, limpar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="titleDialog" class="confirm-dialog title-dialog">
+    <form id="titleForm" method="dialog">
+      <div class="dialog-icon dialog-pencil" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="m15.7 5.3 3 3L8.9 18H6v-2.9l9.7-9.8Zm2.1-2.1a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2l-1.1 1.1-3-3 1.1-1.1Z"/></svg>
+      </div>
+      <h2>Nome da lista</h2>
+      <p>Este nome também aparecerá no texto compartilhado.</p>
+      <input id="listNameInput" class="dialog-input" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Caixa 10">
+      <div class="dialog-actions">
+        <button class="button button-secondary" value="cancel">Cancelar</button>
+        <button id="saveTitleButton" class="button button-primary" value="save">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form method="dialog">
+      <div class="settings-heading">
+        <div>
+          <span class="eyebrow">PREFERÊNCIAS</span>
+          <h2>Configurações</h2>
+        </div>
+        <button class="dialog-close" value="close" aria-label="Fechar configurações">×</button>
+      </div>
+
+      <fieldset class="theme-fieldset">
+        <legend>Tema do aplicativo</legend>
+        <div class="theme-grid">
+          <label class="theme-option theme-preview-default">
+            <input type="radio" name="theme" value="default">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Padrão</strong>
+          </label>
+          <label class="theme-option theme-preview-pink">
+            <input type="radio" name="theme" value="pink">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Rosa</strong>
+          </label>
+          <label class="theme-option theme-preview-blue">
+            <input type="radio" name="theme" value="blue">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Azul</strong>
+          </label>
+          <label class="theme-option theme-preview-purple">
+            <input type="radio" name="theme" value="purple">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Roxo</strong>
+          </label>
+          <label class="theme-option theme-preview-sunset">
+            <input type="radio" name="theme" value="sunset">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Solar</strong>
+          </label>
+          <label class="theme-option theme-preview-glass">
+            <input type="radio" name="theme" value="glass">
+            <span class="theme-swatch"><i></i></span>
+            <strong>Vitrificado</strong>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="setting-toggle-row">
+        <div>
+          <strong>NUP Padrão UFPB</strong>
+          <span>Começa com 23074 e possui 17 dígitos</span>
+        </div>
+        <label class="switch">
+          <input id="nupValidationToggle" type="checkbox">
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
       </div>
     </form>
   </dialog>
