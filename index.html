@@ -74,7 +74,8 @@
           <span>Iniciar câmera</span>
         </button>
         <button id="scanModeButton" class="button button-secondary mode-button" type="button" aria-label="Mudar tipo de leitura">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
+          <svg class="mode-icon mode-icon-qr" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
+          <svg class="mode-icon mode-icon-bars" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2v16H3V4Zm4 0h1v16H7V4Zm3 0h3v16h-3V4Zm5 0h1v16h-1V4Zm3 0h3v16h-3V4Z"/></svg>
           <span id="scanModeText">QR Code</span>
         </button>
         <button id="switchButton" class="button button-secondary is-hidden" type="button" aria-label="Trocar câmera">
@@ -91,7 +92,6 @@
     <section class="card list-card" aria-labelledby="listTitle">
       <div class="section-heading list-heading">
         <div class="editable-title-wrap">
-          <span class="eyebrow">LISTA</span>
           <div class="editable-title-row">
             <h2 id="listTitle">Lista</h2>
             <button id="editTitleButton" class="edit-title-button" type="button" aria-label="Editar nome da lista" title="Editar nome da lista">
@@ -214,6 +214,16 @@
           <span class="switch-track" aria-hidden="true"></span>
         </label>
       </div>
+    </form>
+  </dialog>
+
+  <dialog id="nupErrorDialog" class="confirm-dialog nup-error-dialog">
+    <form method="dialog">
+      <div class="dialog-icon nup-error-icon" aria-hidden="true">!</div>
+      <h2>NUP Padrão UFPB não encontrado</h2>
+      <p>O número precisa começar com <strong>23074</strong> e possuir <strong>17 dígitos</strong>.</p>
+      <p class="nup-error-tip">Se o erro persistir, tente ler o código de barras.</p>
+      <button id="nupErrorOkButton" class="button button-primary nup-ok-button" value="ok">OK, entendi</button>
     </form>
   </dialog>
 

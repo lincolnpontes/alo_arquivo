@@ -157,8 +157,10 @@ button, a { -webkit-touch-callout: none; }
 .scan-guide {
   position: absolute;
   z-index: 3;
-  width: min(84%, 440px);
-  height: min(57%, 235px);
+  width: min(60%, 280px);
+  height: auto;
+  max-height: none;
+  aspect-ratio: 1;
   pointer-events: none;
   opacity: 0;
   transition: opacity .25s ease;
@@ -174,6 +176,12 @@ button, a { -webkit-touch-callout: none; }
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .45));
 }
 .camera-stage.is-live .scan-guide { opacity: .96; }
+.camera-stage.mode-barcode .scan-guide {
+  width: min(91%, 520px);
+  height: min(36%, 150px);
+  max-height: none;
+  aspect-ratio: auto;
+}
 .scan-guide span {
   position: absolute;
   top: 8%; left: 7%; right: 7%;
@@ -183,7 +191,7 @@ button, a { -webkit-touch-callout: none; }
   box-shadow: 0 0 10px rgba(45, 212, 168, .8);
   animation: scanline 2.6s ease-in-out infinite;
 }
-@keyframes scanline { 0%, 100% { transform: translateY(0); opacity: .3; } 50% { transform: translateY(170px); opacity: 1; } }
+@keyframes scanline { 0%, 100% { top: 8%; opacity: .3; } 50% { top: 89%; opacity: 1; } }
 
 .scan-feedback {
   position: absolute;
@@ -240,13 +248,17 @@ button, a { -webkit-touch-callout: none; }
 .button-share { flex: 1; max-width: 500px; color: #fff; background: linear-gradient(135deg, #123b59, var(--navy)); box-shadow: 0 9px 22px rgba(16, 42, 67, .24); }
 .button-danger { color: #fff; background: var(--danger); }
 .is-hidden { display: none !important; }
-.start-button { flex: 1 1 175px; }
-.mode-button { flex: 0 0 auto; min-width: 128px; padding-inline: 13px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
+.start-button { flex: 1 1 0; min-width: 0; }
+.mode-button { flex: 0 0 128px; width: 128px; min-width: 128px; max-width: 128px; padding-inline: 13px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
+.mode-button span { white-space: nowrap; }
+.mode-icon-bars { display: none; }
+.mode-button.is-barcode .mode-icon-qr { display: none; }
+.mode-button.is-barcode .mode-icon-bars { display: block; }
 
 .list-heading { align-items: center; margin-bottom: 10px; }
 .editable-title-wrap { min-width: 0; }
 .editable-title-row { display: flex; align-items: center; gap: 6px; }
-.editable-title-row h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editable-title-row h2 { margin-top: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edit-title-button { display: grid; place-items: center; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; color: var(--mint-dark); background: var(--mint-soft); cursor: pointer; }
 .edit-title-button svg { width: 17px; fill: currentColor; }
 .type-counter { display: flex; align-items: center; flex: 0 0 auto; height: 36px; overflow: hidden; border: 1px solid rgba(8, 127, 107, .14); border-radius: 999px; color: var(--mint-dark); background: var(--mint-soft); }
@@ -300,6 +312,10 @@ button, a { -webkit-touch-callout: none; }
 .confirm-dialog p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .dialog-actions { display: flex; gap: 9px; width: 100%; margin-top: 22px; }
 .dialog-actions .button { flex: 1; }
+.nup-error-dialog p + p { margin-top: 11px; }
+.nup-error-icon { color: #b42318; background: #fee4e2; }
+.nup-error-tip { width: 100%; padding: 11px 12px; border-radius: 13px; color: #8a3a08 !important; background: #fff1d6; font-weight: 800; }
+.nup-ok-button { width: 100%; margin-top: 20px; }
 .dialog-pencil { color: var(--mint-dark); background: var(--mint-soft); }
 .dialog-pencil svg { width: 25px; fill: currentColor; }
 .dialog-input { width: 100%; height: 50px; margin-top: 18px; padding: 0 15px; border: 2px solid var(--line); border-radius: 14px; outline: none; color: var(--ink); background: #fff; font: inherit; font-size: 16px; font-weight: 750; text-align: center; }
@@ -384,7 +400,6 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   .camera-actions .button { padding-inline: 12px; }
   .camera-actions .button-secondary span { display: none; }
   .camera-actions .mode-button span { display: inline; }
-  .mode-button { min-width: 112px; }
   .action-bar .button { padding-inline: 13px; }
 }
 

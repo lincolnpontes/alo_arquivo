@@ -17,15 +17,22 @@
     return scanMode === 'qr' ? isQrCode : !isQrCode;
   }
 
+  function keepRearCameras(devices) {
+    const labelOf = camera => String(camera?.label || '').toLowerCase();
+    const confirmedRear = devices.filter(camera => /back|rear|environment|traseir/.test(labelOf(camera)));
+    if (confirmedRear.length) return confirmedRear;
+    return devices.filter(camera => !/front|user|frontal|selfie|facetime/.test(labelOf(camera)));
+  }
+
   function buildShareText(codes, settings) {
     const count = codes.length;
     const noun = settings.itemType === 'documentos'
       ? (count === 1 ? 'documento lido' : 'documentos lidos')
       : (count === 1 ? 'processo lido' : 'processos lidos');
-    return `*${cleanListName(settings.listName)}*\n${codes.join('\n')}\n\nTotal: ${count} ${noun}.`;
+    return `*${cleanListName(settings.listName)}*\n${codes.join('\n')}\n\nTotal: ${count} ${noun}.`.trimStart();
   }
 
-  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, buildShareText });
+  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, keepRearCameras, buildShareText });
   root.AloArquivoLogic = logic;
   if (typeof module !== 'undefined' && module.exports) module.exports = logic;
 })(typeof window !== 'undefined' ? window : globalThis);

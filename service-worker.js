@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alo-arquivo-v3';
+const CACHE_NAME = 'alo-arquivo-v7';
 const APP_SHELL = [
   './',
   './index.html',

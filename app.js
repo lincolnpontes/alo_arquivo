@@ -46,6 +46,8 @@
     settingsButton: document.getElementById('settingsButton'),
     settingsDialog: document.getElementById('settingsDialog'),
     nupValidationToggle: document.getElementById('nupValidationToggle'),
+    nupErrorDialog: document.getElementById('nupErrorDialog'),
+    nupErrorOkButton: document.getElementById('nupErrorOkButton'),
     toast: document.getElementById('toast')
   };
 
@@ -61,6 +63,7 @@
   let feedbackTimer = null;
   let toastTimer = null;
   let audioContext = null;
+  let lastInvalidDismissedAt = 0;
 
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
@@ -184,9 +187,9 @@
       const nup = logic.extractNup(rawText);
       if (!nup) {
         const now = Date.now();
-        if (lastFeedback.value !== `invalid:${rawText}` || now - lastFeedback.time > FEEDBACK_COOLDOWN) {
+        if (!elements.nupErrorDialog.open && now - lastInvalidDismissedAt > FEEDBACK_COOLDOWN) {
           lastFeedback = { value: `invalid:${rawText}`, time: now };
-          showScanFeedback('error', 'Se o erro persistir, tente ler o código de barras.');
+          elements.nupErrorDialog.showModal();
           playTone('error');
           if (navigator.vibrate) navigator.vibrate([80, 55, 80]);
         }
@@ -280,6 +283,10 @@
     return score;
   }
 
+  function keepRearCameras(devices) {
+    return logic.keepRearCameras(devices);
+  }
+
   function findPreferredCameraIndex() {
     const savedId = localStorage.getItem(CAMERA_KEY);
     const savedIndex = cameras.findIndex(camera => camera.id === savedId);
@@ -291,11 +298,16 @@
   }
 
   function scannerConfig() {
+    const barcodeMode = settings.scanMode === 'barcode';
     return {
-      fps: 12,
+      fps: 15,
       qrbox: (viewfinderWidth, viewfinderHeight) => ({
-        width: Math.floor(Math.min(viewfinderWidth * .84, 440)),
-        height: Math.floor(Math.min(viewfinderHeight * .52, 220))
+        width: Math.floor(barcodeMode
+          ? Math.min(viewfinderWidth * .9, 520)
+          : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320)),
+        height: Math.floor(barcodeMode
+          ? Math.min(viewfinderHeight * .34, 150)
+          : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320))
       }),
       aspectRatio: 1.333334,
       disableFlip: false,
@@ -325,12 +337,13 @@
         });
       }
 
-      cameras = await Html5Qrcode.getCameras();
-      if (!cameras.length) throw new Error('Nenhuma câmera encontrada');
+      cameras = keepRearCameras(await Html5Qrcode.getCameras());
+      if (!cameras.length) throw new Error('Nenhuma câmera traseira encontrada');
       cameraIndex = findPreferredCameraIndex();
       await beginScanning(cameras[cameraIndex].id);
       localStorage.setItem(CAMERA_KEY, cameras[cameraIndex].id);
       elements.switchButton.classList.toggle('is-hidden', cameras.length < 2);
+      await improveCameraQuality();
       await refreshTorchAvailability();
       setCameraLive(true);
     } catch (error) {
@@ -369,7 +382,7 @@
     const message = String(error?.message || error || '').toLowerCase();
     if (/permission|denied|notallowed/.test(message)) return 'Permissão da câmera negada. Libere nas configurações do navegador.';
     if (/secure|https/.test(message)) return 'A câmera precisa de uma conexão segura (HTTPS).';
-    if (/notfound|nenhuma|devicesnotfound/.test(message)) return 'Nenhuma câmera foi encontrada neste aparelho.';
+    if (/notfound|nenhuma|devicesnotfound/.test(message)) return 'Nenhuma câmera traseira foi encontrada neste aparelho.';
     if (/notreadable|trackstart|could not start/.test(message)) return 'A câmera está sendo usada por outro aplicativo.';
     return 'Não foi possível abrir a câmera. Toque para tentar novamente.';
   }
@@ -386,16 +399,39 @@
       : `Modo ${mode}. A câmera permanece aberta entre as leituras.`;
   }
 
-  function toggleScanMode() {
+  async function toggleScanMode() {
     settings.scanMode = settings.scanMode === 'qr' ? 'barcode' : 'qr';
     saveSettings();
     updateScanModeUI();
     showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
+
+    if (scanner?.isScanning && cameras[cameraIndex]) {
+      isStarting = true;
+      elements.startButton.disabled = true;
+      elements.scanModeButton.disabled = true;
+      setCameraStatus('loading', 'Ajustando');
+      try {
+        await beginScanning(cameras[cameraIndex].id);
+        await improveCameraQuality();
+        await refreshTorchAvailability();
+        setCameraLive(true);
+      } catch {
+        setCameraLive(false);
+        setCameraStatus('error', 'Falhou');
+        showToast('Não foi possível mudar o modo da câmera.');
+      } finally {
+        isStarting = false;
+        elements.startButton.disabled = false;
+        elements.scanModeButton.disabled = false;
+      }
+    }
   }
 
   function updateScanModeUI() {
     const isQr = settings.scanMode === 'qr';
     elements.scanModeText.textContent = isQr ? 'QR Code' : 'Barras';
+    elements.scanModeButton.classList.toggle('is-barcode', !isQr);
+    elements.cameraStage.classList.toggle('mode-barcode', !isQr);
     elements.scanModeButton.setAttribute('aria-label', isQr
       ? 'Leitura de QR Code. Toque para mudar para código de barras.'
       : 'Leitura de código de barras. Toque para mudar para QR Code.');
@@ -416,6 +452,7 @@
       cameraIndex = (cameraIndex + 1) % cameras.length;
       await beginScanning(cameras[cameraIndex].id);
       localStorage.setItem(CAMERA_KEY, cameras[cameraIndex].id);
+      await improveCameraQuality();
       await refreshTorchAvailability();
       setCameraLive(true);
     } catch (error) {
@@ -438,6 +475,30 @@
     elements.torchButton.classList.toggle('is-hidden', !supportsTorch);
     elements.torchButton.setAttribute('aria-pressed', 'false');
     torchEnabled = false;
+  }
+
+  async function improveCameraQuality() {
+    try {
+      const capabilities = scanner.getRunningTrackCapabilities?.();
+      if (!capabilities) return;
+
+      const constraints = {};
+      if (capabilities.width?.max) {
+        constraints.width = { ideal: Math.min(1920, capabilities.width.max) };
+      }
+      if (capabilities.height?.max) {
+        constraints.height = { ideal: Math.min(1080, capabilities.height.max) };
+      }
+      if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
+        constraints.advanced = [{ focusMode: 'continuous' }];
+      }
+
+      if (Object.keys(constraints).length) {
+        await scanner.applyVideoConstraints(constraints);
+      }
+    } catch {
+      // Mantém a leitura ativa se o navegador não aceitar ajustes avançados.
+    }
   }
 
   async function toggleTorch() {
@@ -489,7 +550,7 @@
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Alô Arquivo', text });
+        await navigator.share({ text: text.trimStart() });
         return;
       } catch (error) {
         if (error?.name === 'AbortError') return;
@@ -544,6 +605,9 @@
   elements.shareButton.addEventListener('click', shareCodes);
   elements.clearButton.addEventListener('click', () => elements.clearDialog.showModal());
   elements.confirmClearButton.addEventListener('click', clearCodes);
+  elements.nupErrorDialog.addEventListener('close', () => {
+    lastInvalidDismissedAt = Date.now();
+  });
   elements.editTitleButton.addEventListener('click', openTitleDialog);
   elements.saveTitleButton.addEventListener('click', saveListName);
   elements.settingsButton.addEventListener('click', openSettings);
