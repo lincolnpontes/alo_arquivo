@@ -251,9 +251,6 @@ button, a { -webkit-touch-callout: none; }
 .start-button { flex: 1 1 0; min-width: 0; }
 .mode-button { flex: 0 0 128px; width: 128px; min-width: 128px; max-width: 128px; padding-inline: 13px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
 .mode-button span { white-space: nowrap; }
-.mode-icon-bars { display: none; }
-.mode-button.is-barcode .mode-icon-qr { display: none; }
-.mode-button.is-barcode .mode-icon-bars { display: block; }
 
 .list-heading { align-items: center; margin-bottom: 10px; }
 .editable-title-wrap { min-width: 0; }

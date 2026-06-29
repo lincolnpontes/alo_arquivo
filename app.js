@@ -2,7 +2,6 @@
   'use strict';
 
   const STORAGE_KEY = 'alo_arquivo_leituras_v1';
-  const CAMERA_KEY = 'alo_arquivo_camera_v1';
   const SETTINGS_KEY = 'alo_arquivo_config_v1';
   const FEEDBACK_COOLDOWN = 1700;
   const DEFAULT_SETTINGS = Object.freeze({
@@ -13,6 +12,8 @@
     scanMode: 'qr'
   });
   const logic = window.AloArquivoLogic;
+  const QR_MODE_ICON = 'M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z';
+  const BARCODE_MODE_ICON = 'M3 4h2v16H3V4Zm4 0h1v16H7V4Zm3 0h3v16h-3V4Zm5 0h1v16h-1V4Zm3 0h3v16h-3V4Z';
 
   const elements = {
     themeColor: document.getElementById('themeColor'),
@@ -24,13 +25,14 @@
     shareButton: document.getElementById('shareButton'),
     clearButton: document.getElementById('clearButton'),
     startButton: document.getElementById('startButton'),
-    switchButton: document.getElementById('switchButton'),
     torchButton: document.getElementById('torchButton'),
     scanModeButton: document.getElementById('scanModeButton'),
     scanModeText: document.getElementById('scanModeText'),
+    scanModeIconPath: document.getElementById('scanModeIconPath'),
     cameraStatus: document.getElementById('cameraStatus'),
     cameraStatusText: document.getElementById('cameraStatusText'),
     cameraStage: document.getElementById('cameraStage'),
+    scanGuide: document.querySelector('.scan-guide'),
     cameraPlaceholder: document.getElementById('cameraPlaceholder'),
     cameraHelp: document.getElementById('cameraHelp'),
     scanFeedback: document.getElementById('scanFeedback'),
@@ -55,8 +57,7 @@
   let codes = loadCodes();
   let codeSet = new Set(codes);
   let scanner = null;
-  let cameras = [];
-  let cameraIndex = 0;
+  let preferredRearCameraId = null;
   let isStarting = false;
   let torchEnabled = false;
   let lastFeedback = { value: '', time: 0 };
@@ -68,24 +69,18 @@
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
     const formats = window.Html5QrcodeSupportedFormats;
+    if (settings.scanMode === 'qr') return [formats.QR_CODE];
     return [
-      formats.QR_CODE,
-      formats.AZTEC,
       formats.CODABAR,
       formats.CODE_39,
       formats.CODE_93,
       formats.CODE_128,
-      formats.DATA_MATRIX,
-      formats.MAXICODE,
       formats.ITF,
       formats.EAN_13,
       formats.EAN_8,
       formats.PDF_417,
-      formats.RSS_14,
-      formats.RSS_EXPANDED,
       formats.UPC_A,
-      formats.UPC_E,
-      formats.UPC_EAN_EXTENSION
+      formats.UPC_E
     ].filter(value => value !== undefined);
   };
 
@@ -274,29 +269,6 @@
     elements.cameraStatusText.textContent = text;
   }
 
-  function cameraScore(camera) {
-    const label = (camera.label || '').toLowerCase();
-    let score = 0;
-    if (/back|rear|environment|traseir/.test(label)) score += 10;
-    if (/wide|grande angular|ultra/.test(label)) score -= 2;
-    if (/front|user|frontal/.test(label)) score -= 10;
-    return score;
-  }
-
-  function keepRearCameras(devices) {
-    return logic.keepRearCameras(devices);
-  }
-
-  function findPreferredCameraIndex() {
-    const savedId = localStorage.getItem(CAMERA_KEY);
-    const savedIndex = cameras.findIndex(camera => camera.id === savedId);
-    if (savedIndex >= 0) return savedIndex;
-
-    return cameras.reduce((bestIndex, camera, index) => (
-      cameraScore(camera) > cameraScore(cameras[bestIndex] || {}) ? index : bestIndex
-    ), 0);
-  }
-
   function scannerConfig() {
     const barcodeMode = settings.scanMode === 'barcode';
     return {
@@ -315,6 +287,23 @@
     };
   }
 
+  function rearCameraScore(camera) {
+    const label = String(camera?.label || '').toLowerCase();
+    let score = /back|rear|environment|traseir/.test(label) ? 20 : 0;
+    if (/main|principal|camera 0|câmera 0/.test(label)) score += 4;
+    if (/ultra|wide|grande angular|tele|macro/.test(label)) score -= 5;
+    return score;
+  }
+
+  async function selectBestRearCamera() {
+    const devices = await Html5Qrcode.getCameras();
+    const confirmedRear = devices
+      .filter(camera => /back|rear|environment|traseir/.test(String(camera.label || '').toLowerCase()))
+      .filter(camera => !/front|user|frontal|selfie|facetime/.test(String(camera.label || '').toLowerCase()))
+      .sort((a, b) => rearCameraScore(b) - rearCameraScore(a));
+    return confirmedRear[0]?.id || null;
+  }
+
   async function startCamera() {
     if (isStarting) return;
     if (!window.Html5Qrcode) {
@@ -330,19 +319,10 @@
     elements.cameraHelp.textContent = 'Autorize o uso da câmera quando o aparelho solicitar.';
 
     try {
-      if (!scanner) {
-        scanner = new Html5Qrcode('reader', {
-          formatsToSupport: supportedFormats(),
-          verbose: false
-        });
-      }
-
-      cameras = keepRearCameras(await Html5Qrcode.getCameras());
-      if (!cameras.length) throw new Error('Nenhuma câmera traseira encontrada');
-      cameraIndex = findPreferredCameraIndex();
-      await beginScanning(cameras[cameraIndex].id);
-      localStorage.setItem(CAMERA_KEY, cameras[cameraIndex].id);
-      elements.switchButton.classList.toggle('is-hidden', cameras.length < 2);
+      if (!scanner) createScanner();
+      preferredRearCameraId = await selectBestRearCamera();
+      await beginScanning();
+      await ensureRearCamera();
       await improveCameraQuality();
       await refreshTorchAvailability();
       setCameraLive(true);
@@ -365,7 +345,6 @@
       elements.startButton.disabled = true;
       await safeStopScanner();
       setCameraLive(false);
-      elements.switchButton.classList.add('is-hidden');
       elements.torchButton.classList.add('is-hidden');
       elements.startButton.disabled = false;
       return;
@@ -373,16 +352,47 @@
     await startCamera();
   }
 
-  async function beginScanning(cameraId) {
+  function createScanner() {
+    scanner = new Html5Qrcode('reader', {
+      formatsToSupport: supportedFormats(),
+      verbose: false
+    });
+  }
+
+  async function resetScannerForMode() {
+    await safeStopScanner();
+    try { scanner?.clear(); } catch { /* O leitor será recriado abaixo. */ }
+    scanner = null;
+    createScanner();
+  }
+
+  async function beginScanning() {
     if (scanner?.isScanning) await scanner.stop();
-    await scanner.start(cameraId, scannerConfig(), registerReading, () => {});
+    await scanner.start(
+      preferredRearCameraId
+        ? { deviceId: { exact: preferredRearCameraId } }
+        : { facingMode: { exact: 'environment' } },
+      scannerConfig(),
+      registerReading,
+      () => {}
+    );
+  }
+
+  async function ensureRearCamera() {
+    const video = document.querySelector('#reader video');
+    const track = video?.srcObject?.getVideoTracks?.()[0];
+    const facingMode = track?.getSettings?.().facingMode;
+    if (facingMode === 'user') {
+      await safeStopScanner();
+      throw new Error('Câmera frontal bloqueada');
+    }
   }
 
   function cameraErrorMessage(error) {
     const message = String(error?.message || error || '').toLowerCase();
     if (/permission|denied|notallowed/.test(message)) return 'Permissão da câmera negada. Libere nas configurações do navegador.';
     if (/secure|https/.test(message)) return 'A câmera precisa de uma conexão segura (HTTPS).';
-    if (/notfound|nenhuma|devicesnotfound/.test(message)) return 'Nenhuma câmera traseira foi encontrada neste aparelho.';
+    if (/front|frontal|notfound|nenhuma|devicesnotfound/.test(message)) return 'A câmera frontal está desativada. Nenhuma câmera traseira foi encontrada.';
     if (/notreadable|trackstart|could not start/.test(message)) return 'A câmera está sendo usada por outro aplicativo.';
     return 'Não foi possível abrir a câmera. Toque para tentar novamente.';
   }
@@ -405,16 +415,21 @@
     updateScanModeUI();
     showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
 
-    if (scanner?.isScanning && cameras[cameraIndex]) {
+    const wasScanning = Boolean(scanner?.isScanning);
+    if (scanner) {
       isStarting = true;
       elements.startButton.disabled = true;
       elements.scanModeButton.disabled = true;
-      setCameraStatus('loading', 'Ajustando');
+      if (wasScanning) setCameraStatus('loading', 'Ajustando');
       try {
-        await beginScanning(cameras[cameraIndex].id);
-        await improveCameraQuality();
-        await refreshTorchAvailability();
-        setCameraLive(true);
+        await resetScannerForMode();
+        if (wasScanning) {
+          await beginScanning();
+          await ensureRearCamera();
+          await improveCameraQuality();
+          await refreshTorchAvailability();
+          setCameraLive(true);
+        }
       } catch {
         setCameraLive(false);
         setCameraStatus('error', 'Falhou');
@@ -430,37 +445,16 @@
   function updateScanModeUI() {
     const isQr = settings.scanMode === 'qr';
     elements.scanModeText.textContent = isQr ? 'QR Code' : 'Barras';
-    elements.scanModeButton.classList.toggle('is-barcode', !isQr);
+    elements.scanModeIconPath.setAttribute('d', isQr ? QR_MODE_ICON : BARCODE_MODE_ICON);
     elements.cameraStage.classList.toggle('mode-barcode', !isQr);
+    elements.scanGuide.style.width = isQr ? 'min(60%, 280px)' : 'min(91%, 520px)';
+    elements.scanGuide.style.height = isQr ? 'auto' : 'min(36%, 150px)';
+    elements.scanGuide.style.aspectRatio = isQr ? '1 / 1' : 'auto';
     elements.scanModeButton.setAttribute('aria-label', isQr
       ? 'Leitura de QR Code. Toque para mudar para código de barras.'
       : 'Leitura de código de barras. Toque para mudar para QR Code.');
     if (!scanner?.isScanning) {
       elements.cameraHelp.textContent = `Modo ${isQr ? 'QR Code' : 'código de barras'}. A câmera permanece aberta entre as leituras.`;
-    }
-  }
-
-  async function switchCamera() {
-    if (isStarting || cameras.length < 2) return;
-    isStarting = true;
-    elements.switchButton.disabled = true;
-    elements.torchButton.classList.add('is-hidden');
-    torchEnabled = false;
-    setCameraStatus('loading', 'Trocando');
-
-    try {
-      cameraIndex = (cameraIndex + 1) % cameras.length;
-      await beginScanning(cameras[cameraIndex].id);
-      localStorage.setItem(CAMERA_KEY, cameras[cameraIndex].id);
-      await improveCameraQuality();
-      await refreshTorchAvailability();
-      setCameraLive(true);
-    } catch (error) {
-      setCameraStatus('error', 'Falhou');
-      showToast('Não foi possível trocar a câmera.');
-    } finally {
-      isStarting = false;
-      elements.switchButton.disabled = false;
     }
   }
 
@@ -600,7 +594,6 @@
 
   elements.startButton.addEventListener('click', toggleCamera);
   elements.scanModeButton.addEventListener('click', toggleScanMode);
-  elements.switchButton.addEventListener('click', switchCamera);
   elements.torchButton.addEventListener('click', toggleTorch);
   elements.shareButton.addEventListener('click', shareCodes);
   elements.clearButton.addEventListener('click', () => elements.clearDialog.showModal());
@@ -641,7 +634,11 @@
   renderList();
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js?v=20260629.3')
+        .then(registration => registration.update())
+        .catch(() => {});
+    });
   }
 
   window.__aloArquivo = Object.freeze({

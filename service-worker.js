@@ -1,10 +1,11 @@
-const CACHE_NAME = 'alo-arquivo-v7';
+const CACHE_NAME = 'alo-arquivo-20260629-3';
+const VERSION = '20260629.3';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css',
-  './logic.js',
-  './app.js',
+  `./styles.css?v=${VERSION}`,
+  `./logic.js?v=${VERSION}`,
+  `./app.js?v=${VERSION}`,
   './manifest.json',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -22,25 +23,43 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(windows => Promise.all(windows.map(client => client.navigate(client.url))))
   );
 });
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const network = fetch(event.request)
+  const requestUrl = new URL(event.request.url);
+  const sameOrigin = requestUrl.origin === self.location.origin;
+
+  if (sameOrigin) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
         .then(response => {
-          if (response && (response.ok || response.type === 'opaque')) {
+          if (response.ok) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') return caches.match('./index.html');
+          throw new Error('Recurso indisponível offline');
+        })
+    );
+    return;
+  }
 
-      return cached || network;
-    })
+  event.respondWith(
+    caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+      if (response && (response.ok || response.type === 'opaque')) {
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+      }
+      return response;
+    }))
   );
 });
