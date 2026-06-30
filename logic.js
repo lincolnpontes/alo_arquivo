@@ -17,6 +17,12 @@
     return scanMode === 'qr' ? isQrCode : !isQrCode;
   }
 
+  function nupRetryTip(scanMode) {
+    return scanMode === 'barcode'
+      ? 'Se o erro persistir, tente ler o QR Code.'
+      : 'Se o erro persistir, tente ler o código de barras.';
+  }
+
   function keepRearCameras(devices) {
     const labelOf = camera => String(camera?.label || '').toLowerCase();
     const confirmedRear = devices.filter(camera => /back|rear|environment|traseir/.test(labelOf(camera)));
@@ -36,7 +42,7 @@
     return `\u200B${buildShareText(codes, settings).trimStart()}`;
   }
 
-  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, keepRearCameras, buildShareText, buildNativeShareText });
+  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, nupRetryTip, keepRearCameras, buildShareText, buildNativeShareText });
   root.AloArquivoLogic = logic;
   if (typeof module !== 'undefined' && module.exports) module.exports = logic;
 })(typeof window !== 'undefined' ? window : globalThis);
