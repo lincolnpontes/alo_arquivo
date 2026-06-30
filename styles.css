@@ -14,7 +14,6 @@
   --danger: #dc4c4c;
   --shadow: 0 16px 40px rgba(16, 42, 67, .10);
   --radius: 24px;
-  --control-rotation: -90deg;
 }
 
 * { box-sizing: border-box; }
@@ -263,7 +262,7 @@ body.camera-running .app-shell { padding-top: 10px; }
 .button-danger { color: #fff; background: var(--danger); }
 .is-hidden { display: none !important; }
 .start-button { flex: 1 1 0; min-width: 0; }
-.mode-button { flex: 0 0 128px; width: 128px; min-width: 128px; max-width: 128px; padding-inline: 13px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
+.mode-button { flex: 0 0 112px; width: 112px; min-width: 112px; max-width: 112px; padding-inline: 10px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
 .mode-button span { white-space: nowrap; }
 .torch-button { flex: 0 0 66px; min-width: 66px; padding-inline: 8px; color: var(--mint-dark); border-color: rgba(8, 127, 107, .16); background: var(--mint-soft); }
 .torch-emoji { font-size: 19px; line-height: 1; opacity: .24; filter: grayscale(1); transition: opacity .18s ease, filter .18s ease, transform .18s ease; }
@@ -419,6 +418,8 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   .camera-actions .button-secondary .button-content > span { display: none; }
   .camera-actions .mode-button .button-content > span { display: inline; }
   .camera-actions .torch-button .button-content > span { display: inline; }
+  body.camera-running .start-button .button-content { gap: 5px; font-size: 12px; }
+  body.camera-running .start-button svg { width: 18px; height: 18px; }
   .action-bar .button { padding-inline: 13px; }
 }
 
@@ -479,32 +480,7 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   }
   body.camera-running.barcode-mode .camera-actions {
     flex: 0 0 auto;
-    align-items: stretch;
-    min-height: 58px;
     margin-top: 7px;
-  }
-  body.camera-running.barcode-mode .camera-actions .button {
-    min-height: 58px;
-    padding: 5px;
-    overflow: visible;
-  }
-  body.camera-running.barcode-mode .camera-actions .button svg {
-    width: 18px;
-    height: 18px;
-  }
-  body.camera-running.barcode-mode .camera-actions .button-content {
-    transform: rotate(var(--control-rotation));
-  }
-  body.camera-running.barcode-mode .camera-actions .start-button .button-content {
-    gap: 4px;
-    font-size: 11px;
-  }
-  body.camera-running.barcode-mode .camera-actions .mode-button .button-content {
-    gap: 4px;
-    font-size: 10px;
-  }
-  body.camera-running.barcode-mode .camera-actions .torch-button .button-content {
-    gap: 4px;
   }
   body.camera-running.barcode-mode .scan-guide {
     width: min(48%, 180px) !important;

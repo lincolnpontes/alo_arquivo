@@ -73,7 +73,6 @@
   let lastInvalidDismissedAt = 0;
   let pendingInstallPrompt = null;
   let orientationRestartTimer = null;
-  let controlOrientationSensorActive = false;
 
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
@@ -333,7 +332,6 @@
 
     isStarting = true;
     allowDeviceRotation();
-    if (settings.scanMode === 'barcode') await enableControlOrientationSensor();
     elements.startButton.disabled = true;
     setCameraStatus('loading', 'Iniciando');
     elements.cameraHelp.textContent = 'Autorize o uso da câmera quando o aparelho solicitar.';
@@ -423,9 +421,7 @@
     elements.cameraStage.classList.toggle('is-live', live);
     elements.cameraPlaceholder.classList.toggle('is-hidden', live);
     setCameraStatus(live ? 'live' : 'idle', live ? 'Lendo' : 'Desligada');
-    elements.startButtonText.textContent = live && settings.scanMode === 'barcode'
-      ? 'Parar'
-      : (live ? 'Parar câmera' : 'Iniciar câmera');
+    elements.startButtonText.textContent = live ? 'Parar câmera' : 'Iniciar câmera';
     elements.startButton.setAttribute('aria-label', live ? 'Parar câmera' : 'Iniciar câmera');
     elements.startButton.disabled = false;
     const mode = settings.scanMode === 'qr' ? 'QR Code' : 'código de barras';
@@ -439,7 +435,6 @@
     saveSettings();
     updateScanModeUI();
     allowDeviceRotation();
-    if (settings.scanMode === 'barcode') await enableControlOrientationSensor();
     showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
 
     const wasScanning = Boolean(scanner?.isScanning);
@@ -569,27 +564,6 @@
 
   function allowDeviceRotation() {
     try { screen.orientation?.unlock(); } catch { /* Alguns navegadores não expõem o desbloqueio. */ }
-  }
-
-  function handleControlOrientation(event) {
-    if (settings.scanMode !== 'barcode') return;
-    const gamma = Number(event.gamma);
-    if (!Number.isFinite(gamma) || Math.abs(gamma) < 35) return;
-    document.documentElement.style.setProperty('--control-rotation', gamma >= 0 ? '-90deg' : '90deg');
-  }
-
-  async function enableControlOrientationSensor() {
-    if (controlOrientationSensorActive || typeof DeviceOrientationEvent === 'undefined') return;
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permission = await DeviceOrientationEvent.requestPermission();
-        if (permission !== 'granted') return;
-      } catch {
-        return;
-      }
-    }
-    window.addEventListener('deviceorientation', handleControlOrientation, { passive: true });
-    controlOrientationSensorActive = true;
   }
 
   function scheduleOrientationRestart() {
@@ -792,7 +766,7 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=20260629.11')
+      navigator.serviceWorker.register('./service-worker.js?v=20260630.1')
         .then(registration => registration.update())
         .catch(() => {});
     });
