@@ -14,6 +14,7 @@
   --danger: #dc4c4c;
   --shadow: 0 16px 40px rgba(16, 42, 67, .10);
   --radius: 24px;
+  --control-rotation: -90deg;
 }
 
 * { box-sizing: border-box; }
@@ -254,6 +255,7 @@ body.camera-running .app-shell { padding-top: 10px; }
 .button:focus-visible { outline: 3px solid rgba(45, 212, 168, .4); outline-offset: 2px; }
 .button:disabled { cursor: not-allowed; opacity: .42; }
 .button svg { width: 21px; height: 21px; flex: 0 0 auto; fill: currentColor; }
+.button-content { display: inline-flex; align-items: center; justify-content: center; gap: 9px; white-space: nowrap; transform-origin: center; transition: transform .18s ease; }
 .button-primary { flex: 1; color: #fff; background: linear-gradient(135deg, var(--mint-dark), var(--mint)); box-shadow: 0 8px 20px rgba(8, 127, 107, .25); }
 .button-secondary { color: var(--ink); border: 1px solid var(--line); background: #f8fafc; }
 .button-ghost { color: #526d82; border: 1px solid var(--line); background: #fff; }
@@ -414,9 +416,9 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   .scanner-card, .list-card { padding: 14px; border-radius: 20px; }
   .app-shell { padding-inline: 10px; }
   .camera-actions .button { padding-inline: 12px; }
-  .camera-actions .button-secondary span { display: none; }
-  .camera-actions .mode-button span { display: inline; }
-  .camera-actions .torch-button span { display: inline; }
+  .camera-actions .button-secondary .button-content > span { display: none; }
+  .camera-actions .mode-button .button-content > span { display: inline; }
+  .camera-actions .torch-button .button-content > span { display: inline; }
   .action-bar .button { padding-inline: 13px; }
 }
 
@@ -477,7 +479,32 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   }
   body.camera-running.barcode-mode .camera-actions {
     flex: 0 0 auto;
+    align-items: stretch;
+    min-height: 58px;
     margin-top: 7px;
+  }
+  body.camera-running.barcode-mode .camera-actions .button {
+    min-height: 58px;
+    padding: 5px;
+    overflow: visible;
+  }
+  body.camera-running.barcode-mode .camera-actions .button svg {
+    width: 18px;
+    height: 18px;
+  }
+  body.camera-running.barcode-mode .camera-actions .button-content {
+    transform: rotate(var(--control-rotation));
+  }
+  body.camera-running.barcode-mode .camera-actions .start-button .button-content {
+    gap: 4px;
+    font-size: 11px;
+  }
+  body.camera-running.barcode-mode .camera-actions .mode-button .button-content {
+    gap: 4px;
+    font-size: 10px;
+  }
+  body.camera-running.barcode-mode .camera-actions .torch-button .button-content {
+    gap: 4px;
   }
   body.camera-running.barcode-mode .scan-guide {
     width: min(48%, 180px) !important;

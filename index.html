@@ -14,11 +14,11 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=20260629.9">
+  <link rel="stylesheet" href="styles.css?v=20260629.11">
 
   <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script defer src="logic.js?v=20260629.9"></script>
-  <script defer src="app.js?v=20260629.9"></script>
+  <script defer src="logic.js?v=20260629.11"></script>
+  <script defer src="app.js?v=20260629.11"></script>
 </head>
 <body>
   <header class="app-header">
@@ -75,16 +75,22 @@
 
       <div class="camera-actions">
         <button id="startButton" class="button button-primary start-button" type="button" style="flex:1 1 0;min-width:0">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 13.2A4.2 4.2 0 1 1 12 8.8a4.2 4.2 0 0 1 0 8.4Z"/></svg>
-          <span>Iniciar câmera</span>
+          <span class="button-content">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 13.2A4.2 4.2 0 1 1 12 8.8a4.2 4.2 0 0 1 0 8.4Z"/></svg>
+            <span id="startButtonText">Iniciar câmera</span>
+          </span>
         </button>
         <button id="scanModeButton" class="button button-secondary mode-button" type="button" aria-label="Mudar tipo de leitura" style="flex:0 0 128px;width:128px;min-width:128px;max-width:128px">
-          <svg class="mode-icon" viewBox="0 0 24 24" aria-hidden="true"><path id="scanModeIconPath" d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
-          <span id="scanModeText">QR Code</span>
+          <span class="button-content">
+            <svg class="mode-icon" viewBox="0 0 24 24" aria-hidden="true"><path id="scanModeIconPath" d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
+            <span id="scanModeText">QR Code</span>
+          </span>
         </button>
         <button id="torchButton" class="button button-secondary torch-button is-hidden" type="button" aria-label="Ligar lanterna" aria-pressed="false">
-          <span class="torch-emoji" aria-hidden="true">🔦</span>
-          <span id="torchState" class="torch-state">OFF</span>
+          <span class="button-content">
+            <span class="torch-emoji" aria-hidden="true">🔦</span>
+            <span id="torchState" class="torch-state">OFF</span>
+          </span>
         </button>
       </div>
     </section>
@@ -222,7 +228,7 @@
       <div class="dialog-icon nup-error-icon" aria-hidden="true">!</div>
       <h2>NUP Padrão UFPB não encontrado</h2>
       <p>O número precisa começar com <strong>23074</strong> e possuir <strong>17 dígitos</strong>.</p>
-      <p class="nup-error-tip">Se o erro persistir, tente ler o código de barras.</p>
+      <p id="nupErrorTip" class="nup-error-tip">Se o erro persistir, tente ler o código de barras.</p>
       <button id="nupErrorOkButton" class="button button-primary nup-ok-button" value="ok">OK, entendi</button>
     </form>
   </dialog>
