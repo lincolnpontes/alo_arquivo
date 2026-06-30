@@ -45,6 +45,8 @@
     titleDialog: document.getElementById('titleDialog'),
     listNameInput: document.getElementById('listNameInput'),
     saveTitleButton: document.getElementById('saveTitleButton'),
+    installButton: document.getElementById('installButton'),
+    installHelpDialog: document.getElementById('installHelpDialog'),
     settingsButton: document.getElementById('settingsButton'),
     settingsDialog: document.getElementById('settingsDialog'),
     nupValidationToggle: document.getElementById('nupValidationToggle'),
@@ -65,6 +67,7 @@
   let toastTimer = null;
   let audioContext = null;
   let lastInvalidDismissedAt = 0;
+  let pendingInstallPrompt = null;
 
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
@@ -398,6 +401,7 @@
   }
 
   function setCameraLive(live) {
+    document.body.classList.toggle('camera-running', live);
     elements.cameraStage.classList.toggle('is-live', live);
     elements.cameraPlaceholder.classList.toggle('is-hidden', live);
     setCameraStatus(live ? 'live' : 'idle', live ? 'Lendo' : 'Desligada');
@@ -541,10 +545,11 @@
   async function shareCodes() {
     if (!codes.length) return;
     const text = buildShareText();
+    const whatsappSafeText = logic.buildNativeShareText(codes, settings);
 
     if (navigator.share) {
       try {
-        await navigator.share({ text: text.trimStart() });
+        await navigator.share({ text: whatsappSafeText });
         return;
       } catch (error) {
         if (error?.name === 'AbortError') return;
@@ -592,6 +597,31 @@
     elements.settingsDialog.showModal();
   }
 
+  function isStandaloneApp() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function isAppleMobile() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+
+  async function installApp() {
+    if (pendingInstallPrompt) {
+      pendingInstallPrompt.prompt();
+      await pendingInstallPrompt.userChoice;
+      pendingInstallPrompt = null;
+      elements.installButton.hidden = true;
+      return;
+    }
+
+    if (isAppleMobile()) {
+      elements.installHelpDialog.showModal();
+      return;
+    }
+
+    showToast('A instalação será oferecida pelo navegador quando disponível.');
+  }
+
   elements.startButton.addEventListener('click', toggleCamera);
   elements.scanModeButton.addEventListener('click', toggleScanMode);
   elements.torchButton.addEventListener('click', toggleTorch);
@@ -603,6 +633,7 @@
   });
   elements.editTitleButton.addEventListener('click', openTitleDialog);
   elements.saveTitleButton.addEventListener('click', saveListName);
+  elements.installButton.addEventListener('click', installApp);
   elements.settingsButton.addEventListener('click', openSettings);
   elements.itemType.addEventListener('change', () => {
     settings.itemType = elements.itemType.value;
@@ -630,12 +661,25 @@
     }
   });
 
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    pendingInstallPrompt = event;
+    if (!isStandaloneApp()) elements.installButton.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    pendingInstallPrompt = null;
+    elements.installButton.hidden = true;
+    showToast('Alô Arquivo instalado.');
+  });
+
   applySettings();
   renderList();
+  if (isAppleMobile() && !isStandaloneApp()) elements.installButton.hidden = false;
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=20260629.3')
+      navigator.serviceWorker.register('./service-worker.js?v=20260629.5')
         .then(registration => registration.update())
         .catch(() => {});
     });

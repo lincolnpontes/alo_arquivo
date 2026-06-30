@@ -14,11 +14,11 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=20260629.3">
+  <link rel="stylesheet" href="styles.css?v=20260629.5">
 
   <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script defer src="logic.js?v=20260629.3"></script>
-  <script defer src="app.js?v=20260629.3"></script>
+  <script defer src="logic.js?v=20260629.5"></script>
+  <script defer src="app.js?v=20260629.5"></script>
 </head>
 <body>
   <header class="app-header">
@@ -29,9 +29,14 @@
         <p>Leitura rápida e contínua</p>
       </div>
     </div>
-    <button id="settingsButton" class="settings-button" type="button" aria-label="Abrir configurações" title="Configurações">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.8 7.8 0 0 0 .1-1 7.8 7.8 0 0 0-.1-1l2.1-1.6-2-3.4L17 7a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.4 3A7.7 7.7 0 0 0 9 7L6.4 6l-2 3.4L6.6 11a7.8 7.8 0 0 0-.1 1 7.8 7.8 0 0 0 .1 1l-2.1 1.6 2 3.4L9 17a7.7 7.7 0 0 0 1.7 1l.4 3h4l.4-3a7.7 7.7 0 0 0 1.7-1l2.6 1 2-3.4L19.4 13ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
-    </button>
+    <div class="header-actions">
+      <button id="installButton" class="settings-button install-button" type="button" aria-label="Instalar aplicativo" title="Instalar aplicativo" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v10.2l3.6-3.6L18 11l-6 6-6-6 1.4-1.4 3.6 3.6V3ZM5 19h14v2H5v-2Z"/></svg>
+      </button>
+      <button id="settingsButton" class="settings-button" type="button" aria-label="Abrir configurações" title="Configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.8 7.8 0 0 0 .1-1 7.8 7.8 0 0 0-.1-1l2.1-1.6-2-3.4L17 7a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.4 3A7.7 7.7 0 0 0 9 7L6.4 6l-2 3.4L6.6 11a7.8 7.8 0 0 0-.1 1 7.8 7.8 0 0 0 .1 1l-2.1 1.6 2 3.4L9 17a7.7 7.7 0 0 0 1.7 1l.4 3h4l.4-3a7.7 7.7 0 0 0 1.7-1l2.6 1 2-3.4L19.4 13ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="app-shell">
@@ -219,6 +224,15 @@
       <p>O número precisa começar com <strong>23074</strong> e possuir <strong>17 dígitos</strong>.</p>
       <p class="nup-error-tip">Se o erro persistir, tente ler o código de barras.</p>
       <button id="nupErrorOkButton" class="button button-primary nup-ok-button" value="ok">OK, entendi</button>
+    </form>
+  </dialog>
+
+  <dialog id="installHelpDialog" class="confirm-dialog install-help-dialog">
+    <form method="dialog">
+      <div class="dialog-icon install-help-icon" aria-hidden="true">⇩</div>
+      <h2>Instalar Alô Arquivo</h2>
+      <p>No iPhone ou iPad, toque em <strong>Compartilhar</strong> no navegador e depois em <strong>Adicionar à Tela de Início</strong>.</p>
+      <button class="button button-primary nup-ok-button" value="ok">OK, entendi</button>
     </form>
   </dialog>
 

@@ -56,6 +56,7 @@ button, a { -webkit-touch-callout: none; }
 .brand h1 { margin: 0; font-size: clamp(19px, 5vw, 24px); line-height: 1.05; letter-spacing: -.35px; }
 .brand p { margin: 4px 0 0; color: #c6f7e9; font-size: 12px; font-weight: 650; }
 
+.header-actions { display: flex; align-items: center; gap: 8px; }
 .settings-button {
   display: grid;
   place-items: center;
@@ -70,6 +71,11 @@ button, a { -webkit-touch-callout: none; }
   cursor: pointer;
 }
 .settings-button svg { width: 24px; fill: currentColor; }
+.install-button { color: #fff; background: rgba(45, 212, 168, .2); }
+.install-button[hidden] { display: none !important; }
+
+body.camera-running .app-header { display: none; }
+body.camera-running .app-shell { padding-top: 10px; }
 
 .app-shell {
   display: grid;
@@ -132,6 +138,8 @@ button, a { -webkit-touch-callout: none; }
 #reader img { display: none !important; }
 #reader__scan_region { min-height: 270px; background: #071722 !important; }
 #reader__dashboard { display: none !important; }
+#reader .qr-shaded-region { background: transparent !important; }
+.camera-stage.is-live #reader__scan_region { background: transparent !important; }
 
 .camera-placeholder {
   position: absolute;
@@ -173,7 +181,11 @@ button, a { -webkit-touch-callout: none; }
     linear-gradient(var(--mint), var(--mint)) left bottom / 4px 36px no-repeat,
     linear-gradient(var(--mint), var(--mint)) right bottom / 36px 4px no-repeat,
     linear-gradient(var(--mint), var(--mint)) right bottom / 4px 36px no-repeat;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .45));
+  background-color: rgba(255, 255, 255, .08);
+  border-radius: 5px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .58), inset 0 0 0 1px rgba(255, 255, 255, .4);
+  backdrop-filter: brightness(1.3) contrast(1.05);
+  -webkit-backdrop-filter: brightness(1.3) contrast(1.05);
 }
 .camera-stage.is-live .scan-guide { opacity: .96; }
 .camera-stage.mode-barcode .scan-guide {
@@ -313,6 +325,8 @@ button, a { -webkit-touch-callout: none; }
 .nup-error-icon { color: #b42318; background: #fee4e2; }
 .nup-error-tip { width: 100%; padding: 11px 12px; border-radius: 13px; color: #8a3a08 !important; background: #fff1d6; font-weight: 800; }
 .nup-ok-button { width: 100%; margin-top: 20px; }
+.install-help-icon { color: var(--mint-dark); background: var(--mint-soft); }
+.install-help-dialog strong { color: var(--mint-dark); }
 .dialog-pencil { color: var(--mint-dark); background: var(--mint-soft); }
 .dialog-pencil svg { width: 25px; fill: currentColor; }
 .dialog-input { width: 100%; height: 50px; margin-top: 18px; padding: 0 15px; border: 2px solid var(--line); border-radius: 14px; outline: none; color: var(--ink); background: #fff; font: inherit; font-size: 16px; font-weight: 750; text-align: center; }
@@ -398,6 +412,21 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   .camera-actions .button-secondary span { display: none; }
   .camera-actions .mode-button span { display: inline; }
   .action-bar .button { padding-inline: 13px; }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  body.camera-running { padding-bottom: 0; }
+  body.camera-running .app-shell { display: block; width: 100%; max-width: none; padding: 6px; }
+  body.camera-running .scanner-card { padding: 8px; border-radius: 14px; }
+  body.camera-running .scanner-card .section-heading { margin-bottom: 6px; }
+  body.camera-running .camera-stage,
+  body.camera-running #reader,
+  body.camera-running #reader__scan_region { min-height: calc(100vh - 136px); }
+  body.camera-running #reader video { height: calc(100vh - 136px) !important; }
+  body.camera-running .camera-help,
+  body.camera-running .list-card,
+  body.camera-running .action-bar { display: none; }
+  body.camera-running .camera-actions { margin-top: 7px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

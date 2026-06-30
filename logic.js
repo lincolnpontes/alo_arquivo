@@ -32,7 +32,11 @@
     return `*${cleanListName(settings.listName)}*\n${codes.join('\n')}\n\nTotal: ${count} ${noun}.`.trimStart();
   }
 
-  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, keepRearCameras, buildShareText });
+  function buildNativeShareText(codes, settings) {
+    return `\u200B${buildShareText(codes, settings).trimStart()}`;
+  }
+
+  const logic = Object.freeze({ cleanListName, extractNup, formatMatchesMode, keepRearCameras, buildShareText, buildNativeShareText });
   root.AloArquivoLogic = logic;
   if (typeof module !== 'undefined' && module.exports) module.exports = logic;
 })(typeof window !== 'undefined' ? window : globalThis);
