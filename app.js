@@ -71,7 +71,6 @@
   let lastInvalidDismissedAt = 0;
   let pendingInstallPrompt = null;
   let orientationRestartTimer = null;
-  let orientationSensorActive = false;
 
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
@@ -281,17 +280,22 @@
 
   function scannerConfig() {
     const barcodeMode = settings.scanMode === 'barcode';
+    const portraitBarcode = barcodeMode && window.matchMedia('(orientation: portrait)').matches;
     return {
       fps: 18,
       qrbox: (viewfinderWidth, viewfinderHeight) => ({
         width: Math.floor(barcodeMode
-          ? Math.min(viewfinderWidth * .94, 640)
+          ? (portraitBarcode
+            ? Math.min(viewfinderWidth * .48, 180)
+            : Math.min(viewfinderWidth * .94, 640))
           : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320)),
         height: Math.floor(barcodeMode
-          ? Math.min(viewfinderHeight * .48, 180)
+          ? (portraitBarcode
+            ? Math.min(viewfinderHeight * .82, 640)
+            : Math.min(viewfinderHeight * .48, 180))
           : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320))
       }),
-      aspectRatio: barcodeMode ? 1.777778 : 1.333334,
+      aspectRatio: barcodeMode && !portraitBarcode ? 1.777778 : 1.333334,
       disableFlip: false,
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
@@ -325,7 +329,6 @@
 
     isStarting = true;
     allowDeviceRotation();
-    if (settings.scanMode === 'barcode') await enableInternalRotationSensor();
     elements.startButton.disabled = true;
     setCameraStatus('loading', 'Iniciando');
     elements.cameraHelp.textContent = 'Autorize o uso da câmera quando o aparelho solicitar.';
@@ -427,8 +430,7 @@
     settings.scanMode = settings.scanMode === 'qr' ? 'barcode' : 'qr';
     saveSettings();
     updateScanModeUI();
-    if (settings.scanMode === 'barcode') await enableInternalRotationSensor();
-    await applyModeOrientation();
+    allowDeviceRotation();
     showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
 
     const wasScanning = Boolean(scanner?.isScanning);
@@ -464,15 +466,25 @@
     elements.scanModeIconPath.setAttribute('d', isQr ? QR_MODE_ICON : BARCODE_MODE_ICON);
     elements.cameraStage.classList.toggle('mode-barcode', !isQr);
     document.body.classList.toggle('barcode-mode', !isQr);
-    elements.scanGuide.style.width = isQr ? 'min(60%, 280px)' : 'min(94%, 640px)';
-    elements.scanGuide.style.height = isQr ? 'auto' : 'min(48%, 180px)';
-    elements.scanGuide.style.aspectRatio = isQr ? '1 / 1' : 'auto';
+    updateGuideGeometry();
     elements.scanModeButton.setAttribute('aria-label', isQr
       ? 'Leitura de QR Code. Toque para mudar para código de barras.'
       : 'Leitura de código de barras. Toque para mudar para QR Code.');
     if (!scanner?.isScanning) {
       elements.cameraHelp.textContent = `Modo ${isQr ? 'QR Code' : 'código de barras'}. A câmera permanece aberta entre as leituras.`;
     }
+  }
+
+  function updateGuideGeometry() {
+    const isQr = settings.scanMode === 'qr';
+    const portrait = window.matchMedia('(orientation: portrait)').matches;
+    elements.scanGuide.style.width = isQr
+      ? 'min(60%, 280px)'
+      : (portrait ? 'min(48%, 180px)' : 'min(94%, 640px)');
+    elements.scanGuide.style.height = isQr
+      ? 'auto'
+      : (portrait ? 'min(82%, 640px)' : 'min(48%, 180px)');
+    elements.scanGuide.style.aspectRatio = isQr ? '1 / 1' : 'auto';
   }
 
   async function refreshTorchAvailability() {
@@ -550,46 +562,10 @@
     try { screen.orientation?.unlock(); } catch { /* Alguns navegadores não expõem o desbloqueio. */ }
   }
 
-  function handlePhysicalOrientation(event) {
-    if (settings.scanMode !== 'barcode') return;
-    const gamma = Number(event.gamma);
-    if (!Number.isFinite(gamma) || Math.abs(gamma) < 35) return;
-    document.documentElement.style.setProperty('--scanner-rotation', gamma >= 0 ? '90deg' : '-90deg');
-  }
-
-  async function enableInternalRotationSensor() {
-    if (orientationSensorActive) return;
-    if (typeof DeviceOrientationEvent === 'undefined') return;
-
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permission = await DeviceOrientationEvent.requestPermission();
-        if (permission !== 'granted') return;
-      } catch {
-        return;
-      }
-    }
-
-    window.addEventListener('deviceorientation', handlePhysicalOrientation, { passive: true });
-    orientationSensorActive = true;
-  }
-
-  async function applyModeOrientation() {
-    if (settings.scanMode !== 'barcode' || !screen.orientation?.lock) {
-      allowDeviceRotation();
-      return;
-    }
-    try {
-      await screen.orientation.lock('landscape');
-    } catch {
-      // Fora do modo instalado, o navegador pode negar o bloqueio; a rotação física continua liberada.
-      allowDeviceRotation();
-    }
-  }
-
   function scheduleOrientationRestart() {
     clearTimeout(orientationRestartTimer);
     orientationRestartTimer = setTimeout(async () => {
+      updateGuideGeometry();
       if (!scanner?.isScanning || isStarting) return;
       isStarting = true;
       elements.startButton.disabled = true;
@@ -765,6 +741,7 @@
   } else {
     window.addEventListener('orientationchange', scheduleOrientationRestart);
   }
+  window.addEventListener('resize', scheduleOrientationRestart, { passive: true });
 
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
@@ -785,7 +762,7 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=20260629.8')
+      navigator.serviceWorker.register('./service-worker.js?v=20260629.9')
         .then(registration => registration.update())
         .catch(() => {});
     });

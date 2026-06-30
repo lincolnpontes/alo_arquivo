@@ -1,5 +1,5 @@
-const CACHE_NAME = 'alo-arquivo-20260629-8';
-const VERSION = '20260629.8';
+const CACHE_NAME = 'alo-arquivo-20260629-9';
+const VERSION = '20260629.9';
 const APP_SHELL = [
   './',
   './index.html',
