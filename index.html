@@ -14,11 +14,11 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=20260629.5">
+  <link rel="stylesheet" href="styles.css?v=20260629.7">
 
   <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script defer src="logic.js?v=20260629.5"></script>
-  <script defer src="app.js?v=20260629.5"></script>
+  <script defer src="logic.js?v=20260629.7"></script>
+  <script defer src="app.js?v=20260629.7"></script>
 </head>
 <body>
   <header class="app-header">
@@ -82,9 +82,9 @@
           <svg class="mode-icon" viewBox="0 0 24 24" aria-hidden="true"><path id="scanModeIconPath" d="M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 0h3v7h-3v-7Zm-4 4h3v3h-3v-3Z"/></svg>
           <span id="scanModeText">QR Code</span>
         </button>
-        <button id="torchButton" class="button button-secondary is-hidden" type="button" aria-label="Ligar lanterna" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-1 6 3 4v10H6V12l3-4-1-6Zm1.9 8-2 2.7V20h8.2v-7.3l-2-2.7H9.9ZM10 4l.4 4h3.2l.4-4h-4Z"/></svg>
-          <span>Lanterna</span>
+        <button id="torchButton" class="button button-secondary torch-button is-hidden" type="button" aria-label="Ligar lanterna" aria-pressed="false">
+          <span class="torch-emoji" aria-hidden="true">🔦</span>
+          <span id="torchState" class="torch-state">OFF</span>
         </button>
       </div>
     </section>

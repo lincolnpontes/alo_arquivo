@@ -27,9 +27,9 @@
   function buildShareText(codes, settings) {
     const count = codes.length;
     const noun = settings.itemType === 'documentos'
-      ? (count === 1 ? 'documento lido' : 'documentos lidos')
-      : (count === 1 ? 'processo lido' : 'processos lidos');
-    return `*${cleanListName(settings.listName)}*\n${codes.join('\n')}\n\nTotal: ${count} ${noun}.`.trimStart();
+      ? (count === 1 ? 'documento' : 'documentos')
+      : (count === 1 ? 'processo' : 'processos');
+    return `*${cleanListName(settings.listName)}*\n\n${codes.join('\n')}\n\nTotal: ${count} ${noun}`.trimStart();
   }
 
   function buildNativeShareText(codes, settings) {

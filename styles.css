@@ -190,7 +190,7 @@ body.camera-running .app-shell { padding-top: 10px; }
 .camera-stage.is-live .scan-guide { opacity: .96; }
 .camera-stage.mode-barcode .scan-guide {
   width: min(91%, 520px);
-  height: min(36%, 150px);
+  height: min(48%, 180px);
   max-height: none;
   aspect-ratio: auto;
 }
@@ -263,6 +263,11 @@ body.camera-running .app-shell { padding-top: 10px; }
 .start-button { flex: 1 1 0; min-width: 0; }
 .mode-button { flex: 0 0 128px; width: 128px; min-width: 128px; max-width: 128px; padding-inline: 13px; color: var(--mint-dark); background: var(--mint-soft); border-color: rgba(8, 127, 107, .18); }
 .mode-button span { white-space: nowrap; }
+.torch-button { flex: 0 0 66px; min-width: 66px; padding-inline: 8px; color: var(--mint-dark); border-color: rgba(8, 127, 107, .16); background: var(--mint-soft); }
+.torch-emoji { font-size: 19px; line-height: 1; opacity: .24; filter: grayscale(1); transition: opacity .18s ease, filter .18s ease, transform .18s ease; }
+.torch-state { color: var(--mint-dark); font-size: 10px; font-weight: 950; letter-spacing: .7px; }
+.torch-button.torch-on { border-color: var(--mint); background: var(--mint-soft); box-shadow: 0 0 0 3px rgba(45, 212, 168, .12); }
+.torch-button.torch-on .torch-emoji { opacity: 1; filter: none; transform: scale(1.08); }
 
 .list-heading { align-items: center; margin-bottom: 10px; }
 .editable-title-wrap { min-width: 0; }
@@ -411,6 +416,7 @@ html[data-theme="glass"] .code-value { color:#f1f7ff; }
   .camera-actions .button { padding-inline: 12px; }
   .camera-actions .button-secondary span { display: none; }
   .camera-actions .mode-button span { display: inline; }
+  .camera-actions .torch-button span { display: inline; }
   .action-bar .button { padding-inline: 13px; }
 }
 

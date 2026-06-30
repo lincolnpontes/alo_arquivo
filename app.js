@@ -26,6 +26,7 @@
     clearButton: document.getElementById('clearButton'),
     startButton: document.getElementById('startButton'),
     torchButton: document.getElementById('torchButton'),
+    torchState: document.getElementById('torchState'),
     scanModeButton: document.getElementById('scanModeButton'),
     scanModeText: document.getElementById('scanModeText'),
     scanModeIconPath: document.getElementById('scanModeIconPath'),
@@ -56,6 +57,7 @@
   };
 
   let settings = loadSettings();
+  settings.scanMode = 'qr';
   let codes = loadCodes();
   let codeSet = new Set(codes);
   let scanner = null;
@@ -68,11 +70,15 @@
   let audioContext = null;
   let lastInvalidDismissedAt = 0;
   let pendingInstallPrompt = null;
+  let orientationRestartTimer = null;
 
   const supportedFormats = () => {
     if (!window.Html5QrcodeSupportedFormats) return undefined;
     const formats = window.Html5QrcodeSupportedFormats;
     if (settings.scanMode === 'qr') return [formats.QR_CODE];
+    if (settings.nupValidation) {
+      return [formats.CODE_128, formats.ITF].filter(value => value !== undefined);
+    }
     return [
       formats.CODABAR,
       formats.CODE_39,
@@ -275,16 +281,16 @@
   function scannerConfig() {
     const barcodeMode = settings.scanMode === 'barcode';
     return {
-      fps: 15,
+      fps: 18,
       qrbox: (viewfinderWidth, viewfinderHeight) => ({
         width: Math.floor(barcodeMode
-          ? Math.min(viewfinderWidth * .9, 520)
+          ? Math.min(viewfinderWidth * .94, 640)
           : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320)),
         height: Math.floor(barcodeMode
-          ? Math.min(viewfinderHeight * .34, 150)
+          ? Math.min(viewfinderHeight * .48, 180)
           : Math.min(viewfinderWidth * .72, viewfinderHeight * .72, 320))
       }),
-      aspectRatio: 1.333334,
+      aspectRatio: barcodeMode ? 1.777778 : 1.333334,
       disableFlip: false,
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
@@ -317,6 +323,7 @@
     }
 
     isStarting = true;
+    allowDeviceRotation();
     elements.startButton.disabled = true;
     setCameraStatus('loading', 'Iniciando');
     elements.cameraHelp.textContent = 'Autorize o uso da câmera quando o aparelho solicitar.';
@@ -401,6 +408,7 @@
   }
 
   function setCameraLive(live) {
+    if (!live) allowDeviceRotation();
     document.body.classList.toggle('camera-running', live);
     elements.cameraStage.classList.toggle('is-live', live);
     elements.cameraPlaceholder.classList.toggle('is-hidden', live);
@@ -417,6 +425,7 @@
     settings.scanMode = settings.scanMode === 'qr' ? 'barcode' : 'qr';
     saveSettings();
     updateScanModeUI();
+    await applyModeOrientation();
     showToast(settings.scanMode === 'qr' ? 'Leitura de QR Code ativada.' : 'Leitura de código de barras ativada.');
 
     const wasScanning = Boolean(scanner?.isScanning);
@@ -451,8 +460,8 @@
     elements.scanModeText.textContent = isQr ? 'QR Code' : 'Barras';
     elements.scanModeIconPath.setAttribute('d', isQr ? QR_MODE_ICON : BARCODE_MODE_ICON);
     elements.cameraStage.classList.toggle('mode-barcode', !isQr);
-    elements.scanGuide.style.width = isQr ? 'min(60%, 280px)' : 'min(91%, 520px)';
-    elements.scanGuide.style.height = isQr ? 'auto' : 'min(36%, 150px)';
+    elements.scanGuide.style.width = isQr ? 'min(60%, 280px)' : 'min(94%, 640px)';
+    elements.scanGuide.style.height = isQr ? 'auto' : 'min(48%, 180px)';
     elements.scanGuide.style.aspectRatio = isQr ? '1 / 1' : 'auto';
     elements.scanModeButton.setAttribute('aria-label', isQr
       ? 'Leitura de QR Code. Toque para mudar para código de barras.'
@@ -472,6 +481,9 @@
     }
     elements.torchButton.classList.toggle('is-hidden', !supportsTorch);
     elements.torchButton.setAttribute('aria-pressed', 'false');
+    elements.torchButton.setAttribute('aria-label', 'Ligar lanterna');
+    elements.torchButton.classList.remove('torch-on');
+    elements.torchState.textContent = 'OFF';
     torchEnabled = false;
   }
 
@@ -487,8 +499,22 @@
       if (capabilities.height?.max) {
         constraints.height = { ideal: Math.min(1080, capabilities.height.max) };
       }
+      if (capabilities.frameRate?.max) {
+        constraints.frameRate = { ideal: Math.min(30, capabilities.frameRate.max) };
+      }
+
+      const advanced = {};
       if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
-        constraints.advanced = [{ focusMode: 'continuous' }];
+        advanced.focusMode = 'continuous';
+      }
+      if (Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.includes('continuous')) {
+        advanced.exposureMode = 'continuous';
+      }
+      if (Array.isArray(capabilities.whiteBalanceMode) && capabilities.whiteBalanceMode.includes('continuous')) {
+        advanced.whiteBalanceMode = 'continuous';
+      }
+      if (Object.keys(advanced).length) {
+        constraints.advanced = [advanced];
       }
 
       if (Object.keys(constraints).length) {
@@ -505,12 +531,58 @@
       torchEnabled = !torchEnabled;
       await scanner.applyVideoConstraints({ advanced: [{ torch: torchEnabled }] });
       elements.torchButton.setAttribute('aria-pressed', String(torchEnabled));
+      elements.torchButton.setAttribute('aria-label', torchEnabled ? 'Desligar lanterna' : 'Ligar lanterna');
       elements.torchButton.classList.toggle('torch-on', torchEnabled);
-      elements.torchButton.querySelector('span').textContent = torchEnabled ? 'Ligada' : 'Lanterna';
+      elements.torchState.textContent = torchEnabled ? 'ON' : 'OFF';
     } catch {
       torchEnabled = false;
+      elements.torchButton.classList.remove('torch-on');
+      elements.torchState.textContent = 'OFF';
       showToast('A lanterna não está disponível nesta câmera.');
     }
+  }
+
+  function allowDeviceRotation() {
+    try { screen.orientation?.unlock(); } catch { /* Alguns navegadores não expõem o desbloqueio. */ }
+  }
+
+  async function applyModeOrientation() {
+    if (settings.scanMode !== 'barcode' || !screen.orientation?.lock) {
+      allowDeviceRotation();
+      return;
+    }
+    try {
+      await screen.orientation.lock('landscape');
+    } catch {
+      // Fora do modo instalado, o navegador pode negar o bloqueio; a rotação física continua liberada.
+      allowDeviceRotation();
+    }
+  }
+
+  function scheduleOrientationRestart() {
+    clearTimeout(orientationRestartTimer);
+    orientationRestartTimer = setTimeout(async () => {
+      if (!scanner?.isScanning || isStarting) return;
+      isStarting = true;
+      elements.startButton.disabled = true;
+      elements.scanModeButton.disabled = true;
+      setCameraStatus('loading', 'Girando');
+      try {
+        await beginScanning();
+        await ensureRearCamera();
+        await improveCameraQuality();
+        await refreshTorchAvailability();
+        setCameraLive(true);
+      } catch {
+        setCameraLive(false);
+        setCameraStatus('error', 'Falhou');
+        showToast('Não foi possível ajustar a câmera após girar o celular.');
+      } finally {
+        isStarting = false;
+        elements.startButton.disabled = false;
+        elements.scanModeButton.disabled = false;
+      }
+    }, 350);
   }
 
   async function safeStopScanner() {
@@ -660,6 +732,11 @@
       safeStopScanner().then(() => setCameraLive(false));
     }
   });
+  if (screen.orientation?.addEventListener) {
+    screen.orientation.addEventListener('change', scheduleOrientationRestart);
+  } else {
+    window.addEventListener('orientationchange', scheduleOrientationRestart);
+  }
 
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
@@ -673,13 +750,14 @@
     showToast('Alô Arquivo instalado.');
   });
 
+  allowDeviceRotation();
   applySettings();
   renderList();
   if (isAppleMobile() && !isStandaloneApp()) elements.installButton.hidden = false;
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=20260629.5')
+      navigator.serviceWorker.register('./service-worker.js?v=20260629.7')
         .then(registration => registration.update())
         .catch(() => {});
     });
